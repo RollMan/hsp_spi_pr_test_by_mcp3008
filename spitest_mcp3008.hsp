@@ -1,0 +1,30 @@
+#include "hsp3cl.as"
+#include "./mcp3008.as"
+
+onexit *exiterr
+
+devidx = 0
+adc_spich = 0
+devcontrol "spiopen" devidx, adc_spich
+if stat {
+	mes "Failed to open spi channel: " + stat
+	goto *exiterr
+}
+
+*main
+	analog = adcget(0, adc_spich)
+	if analog < 0 {
+		mes "Failed to communicate with MCP3008 via SPI: " + analog
+		goto *exiterr
+	}
+	mes "voltage: " + analog
+	await 1000
+	goto *main
+
+*exiterr
+	devcontrol "spiclose", adc_spich
+	if stat {
+		mes "Failed to close spi channel: " + stat
+		mes "Exiting anyway..."
+	}
+	end
