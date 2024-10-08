@@ -2,6 +2,8 @@
 #ifndef __mcp3008_as__
 #define __mcp3008_as__
 
+#include "hsp3cl.as"
+
 #module
 ; adcget
 ; ------
@@ -29,7 +31,7 @@
 	if stat: return -1
 
 	; Configure spidev options
-	devcontrol "spisetmaxspeedhz", 5000, ch
+	devcontrol "spisetmaxspeedhz", 10000, ch
 	if stat: return -2
 	devcontrol "spisetmode", 0, ch
 	if stat: return -3
@@ -37,29 +39,31 @@
 	if stat: return -4
 	devcontrol "spisetbitsperword", 8, ch
 	if stat: return -5
+	devcontrol "spiconfigureh", 10000, 0, 8
+	if stat: return -6
+	devcontrol "spiconfigurem", 1, 0, 0	; Keep selecting the device for the 3-bytes command
+	if stat: return -7
+	devcontrol "spiconfigurel", 0
+	if stat: return -8
 
 	; Start communication
 	;; Prepare a buffer as {dont care, upper 2 bits of data, lower 8 bits of data}
 	dim recv, 3
 	;; Send start byte
-	devcontrol "spiwritebyte", 1, ch
-	if stat: return -6
-	devcontrol "spireadbyte", ch
-	if stat: return -7
+	devcontrol "spitransceive", 1, ch
+	if stat < 0: return -9
 	byte(0) = stat
 	;; Send control byte: SINGLE_ENDED (0x80) | adc_pin.
-	;; In bit-wire sepresentation,{single/diff, adc_pin[2], adc_pin[1], adc_pin[0], x, x, x}
+	;; In bit-wire sepresentation, {single/diff, adc_pin[2], adc_pin[1], adc_pin[0], x, x, x}
 	SIGNLE_ENDED = 0x80
-	devcontrol "spiwritebyte", SINGLE_ENDED | (adc_pin << 4), ch
-	if stat: return -8
-	devcontrol "spireadbyte", ch
-	if stat: return -9
+	devcontrol "spitransceive", SINGLE_ENDED | (adc_pin << 4), ch
+	if stat < 0: return -10
 	byte(1) = stat
 	;; Send an empty byte (avoiding start byte 0x01) and receive rest data.
-	devcontrol "spiwritebyte", 0x00, ch
-	if stat: return -10
-	devcontrol "spireadbyte", ch
-	if stat: return -11
+	devcontrol "spiconfigurem", 0, 0, 0	; Deselect the device
+	if stat < 0: return -11
+	devcontrol "spitransceive", 0x00, ch
+	if stat < 0: return -12
 	byte(2) = stat
 
 	res = ((0x03 & byte(1)) << 8) | byte(2)

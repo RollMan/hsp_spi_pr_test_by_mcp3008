@@ -5,7 +5,7 @@ onexit *exiterr
 
 devidx = 0
 adc_spich = 0
-devcontrol "spiopen" devidx, adc_spich
+devcontrol "spiopen", devidx, adc_spich
 if stat {
 	mes "Failed to open spi channel: " + stat
 	goto *exiterr
