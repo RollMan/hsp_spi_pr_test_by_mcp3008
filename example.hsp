@@ -1,0 +1,34 @@
+#include "hsp3cl.as"
+
+adc_pin = 0
+ch = 0
+
+devcontrol "spiopen", 0, 0, ch
+
+
+; Configure spidev options
+devcontrol "spisetmaxspeedhz", 10000, ch
+devcontrol "spisetmode", 0, ch
+devcontrol "spisetlsbfirst", 0, ch
+devcontrol "spisetbitsperword", 8, ch
+devcontrol "spiconfigureh", 10000, 0, 8
+devcontrol "spiconfigurem", 1, 0, 0	; Keep selecting the device for the 3-bytes command
+devcontrol "spiconfigurel", 0
+
+; Start communication
+;; Prepare a buffer as {dont care, upper 2 bits of data, lower 8 bits of data}
+dim recv, 3
+;; Send start byte
+devcontrol "spitransceive", 1, 1, ch
+byte(0) = stat
+;; Send control byte: SINGLE_ENDED (0x80) | adc_pin.
+;; In bit-wire sepresentation, {single/diff, adc_pin[2], adc_pin[1], adc_pin[0], x, x, x}
+SIGNLE_ENDED = 0x80
+devcontrol "spitransceive", SINGLE_ENDED | (adc_pin << 4), 1, ch
+byte(1) = stat
+;; Send an empty byte (avoiding start byte 0x01) and receive rest data.
+devcontrol "spiconfigurem", 0, 0, 0	; Deselect the device
+devcontrol "spitransceive", 0x00, 1, ch
+byte(2) = stat
+res = ((0x03 & byte(1)) << 8) | byte(2)
+mes res

@@ -1,4 +1,4 @@
-#include "hsp3cl.as"
+#include "hsp3dish.as"
 #include "./mcp3008.as"
 
 onexit *exiterr
@@ -8,30 +8,26 @@ bus_idx = 0
 chip_select = 0
 devcontrol "spiopen", bus_idx, chip_select, fdch
 if stat {
-	mes "Failed to open spi channel: " + stat
 	goto *exiterr
 }
 
 *main
 	analog = adcgetbybyte(0, fdch)
 	if analog < 0 {
-		mes "Failed to communicate with MCP3008 via byte-by-byte SPI: " + analog
 		goto *exiterr
 	}
 	wait 50
 	analog2 = adcget(0, fdch)
 	if analog2 < 0 {
-		mes "Failed to communicate with MCP3008 via buffered SPI: " + analog
 		goto *exiterr
 	}
 	wait 50
+	redraw 0
+	pos 0, 0
 	mes "voltage: " + analog + " " + analog2
+	redraw 1
 	goto *main
 
 *exiterr
 	devcontrol "spiclose", adc_spich
-	if stat {
-		mes "Failed to close spi channel: " + stat
-		mes "Exiting anyway..."
-	}
 	end
